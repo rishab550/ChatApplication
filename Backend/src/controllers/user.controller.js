@@ -52,6 +52,10 @@ const registerUser = asyncHandler(async (req, res) => {
     profilePic: gender === "male" ? boyProfilepic : girlProfilepic,
   });
 
+  const { accessToken, refreshToken } = await generateAccessAndRefereshToken(
+    user._id,
+  );
+
   const createdUser = await User.findById(user._id).select(
     "-password -refreshToken",
   );
@@ -60,9 +64,22 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(500, "Something went wrong while register a user");
   }
 
+  const options = {
+    httpOnly: true,
+    secure: true,
+  };
+
   return res
     .status(201)
-    .json(new ApiResponse(200, createdUser, "User Registered Successfully"));
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToken", refreshToken, options)
+    .json(
+      new ApiResponse(
+        200,
+        { createdUser, user, accessToken, refreshToken },
+        "User Registered Successfully",
+      ),
+    );
 });
 
 const loginUser = asyncHandler(async (req, res) => {
@@ -117,7 +134,7 @@ const logoutUser = asyncHandler(async (req, res) => {
     req.user._id,
     {
       $unset: {
-        refreshToken: undefined,
+        refreshToken: "",
       },
     },
     {

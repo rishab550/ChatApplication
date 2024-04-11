@@ -1,6 +1,7 @@
 import app from "./app.js";
 import connectDB from "./db/index.js";
 import dotenv from "dotenv";
+import { server } from "./socket/socket.js";
 
 dotenv.config({
   path: "./.env",
@@ -12,7 +13,7 @@ connectDB()
       console.log("Error:", error);
     });
 
-    app.listen(process.env.PORT || 5000, () => {
+    server.listen(process.env.PORT || 5000, () => {
       console.log(`Server is Running at Port ${process.env.PORT}`);
     });
   })

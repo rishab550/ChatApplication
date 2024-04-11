@@ -6,9 +6,11 @@ import asyncHandler from "../utils/asyncHandler.js";
 const activeUsers = asyncHandler(async (req, res) => {
   const loggedInUserId = req.user._id;
 
-  // const filteredUsers = await User.find({ _id: { $ne: loggedInUserId } }); --- If user don't want to add themselves while fetching all the users
+  const filteredUsers = await User.find({
+    _id: { $ne: loggedInUserId },
+  }).select("-password");
 
-  const filteredUsers = await User.find().select("-password -refreshToken");
+  // const filteredUsers = await User.find().select("-password -refreshToken");
 
   return res
     .status(200)

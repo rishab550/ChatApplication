@@ -1,6 +1,7 @@
 import { Conversation } from "../models/conversation.model.js";
 import { Message } from "../models/message.model.js";
 import { User } from "../models/user.model.js";
+import { getReceiverSocketId, io } from "../socket/socket.js";
 import ApiError from "../utils/apiError.js";
 import ApiResponse from "../utils/apiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
@@ -10,13 +11,15 @@ const userMessage = asyncHandler(async (req, res) => {
   const { id: receiverId } = req.params;
   const senderId = req.user._id;
 
-  const conversation = await Conversation.findOne({
+  let conversation = await Conversation.findOne({
     participants: { $all: [senderId, receiverId] },
   });
 
   if (!conversation) {
-    await Conversation.create({
+    // Create a new conversation and assign it to the conversation variable
+    conversation = await Conversation.create({
       participants: [senderId, receiverId],
+      messages: [],
     });
   }
 
@@ -34,6 +37,12 @@ const userMessage = asyncHandler(async (req, res) => {
   // await newMessages.save();
 
   await Promise.all([conversation.save(), newMessages.save()]);
+
+  const receiverSocketId = getReceiverSocketId(receiverId);
+  if (receiverSocketId) {
+    io.to(receiverSocketId).emit("newMessages", newMessages);
+  }
+
   return res
     .status(200)
     .json(new ApiResponse(200, newMessages, "Message Sent Successfully"));
@@ -47,7 +56,14 @@ const getMessages = asyncHandler(async (req, res) => {
     participants: { $all: [senderId, userToChatId] },
   }).populate("messages");
 
+  if (!conversation) {
+    return res
+      .status(404)
+      .json(new ApiResponse(404, [], "Conversation not found"));
+  }
+
   const messages = conversation.messages;
+  console.log(messages);
 
   return res
     .status(200)
